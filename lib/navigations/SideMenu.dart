@@ -36,6 +36,14 @@ class _SideMenuState extends State<SideMenu> {
                 mainNavigatorKey.currentState!.pushNamed('/map');
               },
             ),
+            DrawerListTile(
+              title: "History",
+              svgSrc: "assets/roomB.png",
+              press: () {
+                setActiveRoute('/tagHistory');
+                mainNavigatorKey.currentState!.pushNamed('/tagHistory');
+              },
+            ),
           ],
         ),
       ),

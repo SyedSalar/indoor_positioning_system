@@ -89,19 +89,14 @@
 
 import 'dart:convert';
 import 'dart:math';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
-import 'package:indoor_positioning_system/main.dart';
+import 'package:http/http.dart' as http;
 import 'package:latlong2/latlong.dart';
 import 'package:flutter_map_cancellable_tile_provider/flutter_map_cancellable_tile_provider.dart';
 
-import 'package:mqtt_client/mqtt_client.dart';
-
 class TagPosition extends StatefulWidget {
-  const TagPosition({
-    Key? key,
-  }) : super(key: key);
+  const TagPosition({Key? key}) : super(key: key);
 
   @override
   State<TagPosition> createState() => _TagPositionState();
@@ -109,39 +104,40 @@ class TagPosition extends StatefulWidget {
 
 class _TagPositionState extends State<TagPosition> {
   final MapController mapController = MapController();
-  late MQTTClientWrapper _newClient;
   Map<String, LatLng> _devicePositions = {}; // Map to store device positions
   Map<String, Color> _deviceColors = {}; // Map to store device colors
 
   @override
   void initState() {
     super.initState();
-    _newClient = MQTTClientWrapper();
-    _newClient.prepareMqttClient();
-    _subscribeToLocationUpdates();
+    // Call the function to fetch GPS data when the widget initializes
+    fetchGPSData();
   }
 
-  void _subscribeToLocationUpdates() {
-    _newClient.client.updates
-        ?.listen((List<MqttReceivedMessage<MqttMessage>> c) {
-      final MqttPublishMessage recMess = c[0].payload as MqttPublishMessage;
-      var message =
-          MqttPublishPayload.bytesToStringAsString(recMess.payload.message);
+  Future<void> fetchGPSData() async {
+    // Make an HTTP GET request to fetch GPS data
+    final response =
+        await http.get(Uri.parse('http://localhost:5000/get_gps_data'));
 
-      // Parse the JSON string to a Dart Map
-      Map<String, dynamic> data = json.decode(message);
+    if (response.statusCode == 200) {
+      // Parse the JSON response
+      final List<dynamic> jsonData = json.decode(response.body);
 
-      // Extract device ID
-      String deviceId = data['ID'].toString();
-
+      // Update the device positions map with the retrieved data
       setState(() {
-        // Update device position map
-
-        _devicePositions[deviceId] =
-            LatLng(data['latitude'], data['longitude']);
+        _devicePositions.clear(); // Clear existing data
+        for (final item in jsonData) {
+          final String deviceId = item['name'];
+          final double lat = double.parse(item['lat']);
+          final double long = double.parse(item['long']);
+          _devicePositions[deviceId] = LatLng(lat, long);
+          _deviceColors[deviceId] = _generateRandomColor();
+        }
       });
-      _deviceColors.putIfAbsent(deviceId, () => _generateRandomColor());
-    });
+    } else {
+      // Handle error or display a message
+      print('Failed to fetch GPS data: ${response.statusCode}');
+    }
   }
 
   Color _generateRandomColor() {

@@ -3,6 +3,7 @@ import 'package:indoor_positioning_system/main.dart';
 import 'package:indoor_positioning_system/navigations/SideMenu.dart';
 import 'package:indoor_positioning_system/responsive.dart';
 import 'package:indoor_positioning_system/tagMap.dart';
+import 'package:indoor_positioning_system/tag_history.dart';
 
 final GlobalKey<NavigatorState> mainNavigatorKey = GlobalKey<NavigatorState>();
 
@@ -44,6 +45,9 @@ class _MainScreenState extends State<MainScreen> {
                     case '/map':
                       return MaterialPageRoute(
                           builder: (context) => TagPosition());
+                    case '/tagHistory':
+                      return MaterialPageRoute(
+                          builder: (context) => MyTagHistory());
                   }
                   return null;
                 },

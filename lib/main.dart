@@ -17,8 +17,8 @@ import 'package:mqtt_client/mqtt_client.dart';
 
 main() {
   // Ensure that the platform is set for webview_flutter
-  // MQTTClientWrapper newclient = new MQTTClientWrapper();
-  // newclient.prepareMqttClient();
+  MQTTClientWrapper newclient = new MQTTClientWrapper();
+  newclient.prepareMqttClient();
   runApp(const MyApp());
 }
 
@@ -78,10 +78,11 @@ class MQTTClientWrapper {
     // the next 2 lines are necessary to connect with tls, which is used by HiveMQ Cloud
     // client.secure = true;
     // client.securityContext = SecurityContext.defaultContext;
-    client.keepAlivePeriod = 20;
-    client.onDisconnected = _onDisconnected;
+    client.keepAlivePeriod = 100;
     client.onConnected = _onConnected;
     client.onSubscribed = _onSubscribed;
+    client.autoReconnect = true;
+    client.onDisconnected = _onDisconnected;
   }
 
   void _subscribeToTopic(String topicName) {
@@ -96,7 +97,39 @@ class MQTTClientWrapper {
 
       print('YOU GOT A NEW MESSAGE:');
       print(receivedMessage); // Print the received message
+      Map<String, dynamic> data = json.decode(receivedMessage);
+
+      // Send data to API
+      _sendDataToAPI(data);
     });
+  }
+
+  void _sendDataToAPI(data) async {
+    // Convert the data to JSON
+    String jsonData = jsonEncode(data);
+
+    // Set up your API endpoint
+    Uri url = Uri.parse('http://localhost:5000/post_gps_data');
+
+    try {
+      // Send a POST request to your API
+      http.Response response = await http.post(
+        url,
+        headers: <String, String>{
+          'Content-Type': 'application/json; charset=UTF-8',
+        },
+        body: jsonData,
+      );
+
+      // Check the response
+      if (response.statusCode == 200) {
+        print('Data sent to API successfully');
+      } else {
+        print('Failed to send data to API. Status code: ${response.body}');
+      }
+    } catch (e) {
+      print('Error sending data to API: $e');
+    }
   }
 
   String getReceivedMessage() {
@@ -137,21 +170,6 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'Flutter Demo',
       theme: ThemeData(
-        // This is the theme of your application.
-        //
-        // TRY THIS: Try running your application with "flutter run". You'll see
-        // the application has a blue toolbar. Then, without quitting the app,
-        // try changing the seedColor in the colorScheme below to Colors.green
-        // and then invoke "hot reload" (save your changes or press the "hot
-        // reload" button in a Flutter-supported IDE, or press "r" if you used
-        // the command line to start the app).
-        //
-        // Notice that the counter didn't reset back to zero; the application
-        // state is not lost during the reload. To reset the state, use hot
-        // restart instead.
-        //
-        // This works for code too, not just values: Most code changes can be
-        // tested with just a hot reload.
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
         useMaterial3: true,
       ),
@@ -269,90 +287,7 @@ class _IndoorPositioningAppState extends State<IndoorPositioningApp> {
     super.initState();
 
     // Set up a timer to update the person's position every 4 seconds
-    _timer = Timer.periodic(Duration(seconds: 2), (timer) {
-      // updatePersonPosition();
-      // mysqlConnect();
-      // fetchData();
-    });
   }
-
-  // mysqlConnect() async {
-  //   // Open a connection (testdb should already exist)
-  //   final conn = await MySqlConnection.connect(ConnectionSettings(
-  //       host: 'localhost',
-  //       port: 3306,
-  //       user: 'root',
-  //       db: 'ips',
-  //       password: 'test123'));
-
-  //   // Query the database using a parameterized query
-  //   var results = await conn.query(
-  //       'select UID, ConnectedTo, C_RSSI, O_RSSI, distance from sensordata order by updatedAt DESC LIMIT 1');
-  //   for (var row in results) {
-  //     print(
-  //         'UID: ${row[0]}, ConnectedTo: ${row[1]} C_RSSI: ${row[2]} ${row[3]} ${row[4]}');
-  //     distance = extractNumber(row[2]);
-  //     print(distance);
-  //     connectedTo = row[1];
-  //     area = row[4];
-  //   }
-
-  // Finally, close the connection
-  //   await conn.close();
-  // }
-
-  // double extractNumber(String input) {
-  //   RegExp regExp = RegExp(r'(-?\d+)');
-  //   RegExpMatch? match = regExp.firstMatch(input);
-
-  //   if (match != null) {
-  //     String? numberString = match.group(0);
-  //     return double.parse(numberString!).abs();
-  //   } else {
-  //     // Handle the case where no number is found
-  //     return 0; // or throw an exception, return a default value, etc.
-  //   }
-  // }
-
-  // // Function to update person's position
-  // void updatePersonPosition() {
-  //   // Simulate a changing distance randomly
-
-  //   // Calculate person's position based on distance and node information
-  //   // Update nodeName based on your database information
-
-  //   // For example:
-  //   // nodeName = 'A';
-
-  //   // Calculate the position based on your specific logic
-  //   // Here, we'll simply set X-coordinate based on distance and Y-coordinate based on a constant
-  //   double x1 = 100;
-  //   double y1 = connectedTo == 'BeaconD1'
-  //       ? 130
-  //       : connectedTo == 'BeaconD2'
-  //           ? 130
-  //           : 30;
-  //   double x2Positive = x1 + sqrt(pow(distance, 2) - pow(0, 2));
-  //   double y2Positive = y1 + sqrt(pow(distance, 2) - pow(x2Positive - x1, 2));
-  //   print(x2Positive);
-  //   print(y2Positive);
-  //   setState(() {});
-  //   personPositionX = area == 'immediate'
-  //       ? x2Positive
-  //       : area == 'near'
-  //           ? x2Positive * 1.2
-  //           : x2Positive * 1.3;
-  //   distance * 20.0; // Adjust the multiplier based on your scale
-  //   personPositionY = area == 'immediate'
-  //       ? y2Positive
-  //       : area == 'near'
-  //           ? y2Positive * 1.2
-  //           : y2Positive * 1.3; // Adjust as needed
-
-  //   setState(() {
-  //     // Update UI with the new position
-  //   });
-  // }
 
   @override
   Widget build(BuildContext context) {
@@ -386,137 +321,14 @@ class _IndoorPositioningAppState extends State<IndoorPositioningApp> {
                         'Add Room',
                         style: TextStyle(color: Colors.black),
                       ))),
-              // Positioned(
-              //   top: 100,
-              //   child: Image.asset('assets/dotted bg.png'),
-              // ),
+
               Positioned(top: 120, child: IframeScreen())
-              // Positioned(
-              //   top: 130.0,
-              //   left: 100.0,
-              //   child: Column(
-              //     children: [
-              //       Image.asset(
-              //         'assets/beacon.png',
-              //         scale: 30,
-              //       ),
-              //       Text('Beacon A'),
-              //     ],
-              //   ),
-              // ),
-              // Positioned(
-              //   top: 130.0,
-              //   right: 100.0,
-              //   child: Column(
-              //     children: [
-              //       Image.asset(
-              //         'assets/beacon.png',
-              //         scale: 30,
-              //       ),
-              //       Text('Beacon B'),
-              //     ],
-              //   ),
-              // ),
-              // Positioned(
-              //   bottom: 30.0,
-              //   left: 100.0,
-              //   child: Column(
-              //     children: [
-              //       Image.asset(
-              //         'assets/beacon.png',
-              //         scale: 30,
-              //       ),
-              //       Text('Beacon C'),
-              //     ],
-              //   ),
-              // ),
-              // Positioned(
-              //   bottom: 30.0,
-              //   right: 100.0,
-              //   child: Column(
-              //     children: [
-              //       Image.asset(
-              //         'assets/beacon.png',
-              //         scale: 30,
-              //       ),
-              //       Text('Beacon D'),
-              //     ],
-              //   ),
-              // ),
-              // // Render person's icon at the calculated position
-              // Positioned(
-              //   bottom: connectedTo == 'BeaconD1'
-              //       ? null
-              //       : connectedTo == 'BeaconD2'
-              //           ? null
-              //           : personPositionY,
-              //   top: connectedTo == 'BeaconD1'
-              //       ? personPositionY
-              //       : connectedTo == 'BeaconD2'
-              //           ? personPositionY
-              //           : null,
-              //   left: connectedTo == 'BeaconD1'
-              //       ? personPositionX
-              //       : connectedTo == 'BeaconD3'
-              //           ? personPositionX
-              //           : null,
-              //   right: connectedTo == 'BeaconD1'
-              //       ? null
-              //       : connectedTo == 'BeaconD3'
-              //           ? null
-              //           : personPositionX,
-              //   child: Image.asset(
-              //     'assets/person.png',
-              //     scale: 20,
-              //   ),
-              // ),
             ],
           ),
         ),
       ),
     );
   }
-
-  // Future fetchData() async {
-  //   // final baseUrl = 'http://alphatic.tech/ipsdash/fetch-esp-data.php';
-  //   final baseUrl = 'http://192.168.1.39/ipsdash/fetch-esp-data.php';
-
-  //   // Construct the URL with query parameters
-  //   final url = Uri.parse(baseUrl);
-
-  //   try {
-  //     final response = await http.get(
-  //       url,
-  //     );
-
-  //     if (response.statusCode == 200) {
-  //       // Successful response
-  //       final jsonData = jsonDecode(response.body);
-  //       print(jsonData);
-  //       final newData = Map<String, dynamic>.from(jsonData);
-  //       distance = extractNumber(newData['C_RSSI']);
-  //       print(distance);
-  //       area = newData['distance'];
-  //       print(area);
-  //       connectedTo = newData['ConnectedTo'];
-  //       print(connectedTo);
-  //       // for (var row in newData) {
-  //       //   print(
-  //       //       'UID: ${row[0]}, ConnectedTo: ${row[1]} C_RSSI: ${row[2]} ${row[3]} ${row[4]}');
-  //       //   distance = extractNumber(row[2]);
-  //       //   print(distance);
-  //       //   connectedTo = row[1];
-  //       //   area = row[4];
-  //       // }
-  //     } else {
-  //       // Request failed with an error
-  //       print('API Request failed with status ${response.body}');
-  //     }
-  //   } catch (e) {
-  //     // Handle exceptions, such as network errors or invalid URLs
-  //     print('Error: $e');
-  //   }
-  // }
 
   @override
   void dispose() {
