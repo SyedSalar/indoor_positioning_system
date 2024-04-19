@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:indoor_positioning_system/main.dart';
 import 'package:indoor_positioning_system/navigations/SideMenu.dart';
 import 'package:indoor_positioning_system/responsive.dart';
+import 'package:indoor_positioning_system/tagMap.dart';
 
 final GlobalKey<NavigatorState> mainNavigatorKey = GlobalKey<NavigatorState>();
 
@@ -40,6 +41,9 @@ class _MainScreenState extends State<MainScreen> {
                     case '/':
                       return MaterialPageRoute(
                           builder: (context) => IndoorPositioningApp());
+                    case '/map':
+                      return MaterialPageRoute(
+                          builder: (context) => TagPosition());
                   }
                   return null;
                 },

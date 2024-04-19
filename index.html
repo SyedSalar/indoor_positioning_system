@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Indoor Positioning System</title>
+<style>
+    body {
+        font-family: Arial, sans-serif;
+        margin: 0;
+        padding: 0;
+    }
+    #container {
+        width: 100%;
+        height: 400px; /* Adjust height as needed */
+        position: relative;
+    }
+    .beacon {
+        width: 20px;
+        height: 20px;
+        background-color: blue;
+        border-radius: 50%;
+        position: absolute;
+    }
+    #tag {
+        width: 10px;
+        height: 10px;
+        background-color: red;
+        border-radius: 50%;
+        position: absolute;
+    }
+</style>
+</head>
+<body>
+<div id="container"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js"></script>
+<script>
+    // MQTT broker details
+    const brokerUrl = 'wss://fc0a35552030452d99489f74b27e1ebf.s1.eu.hivemq.cloud:8884/mqtt';
+    const clientId = 'web-client-' + Math.random().toString(16).substr(2, 8); // Generate a random client ID
+
+    // MQTT topics
+    const topic = 'tag1'; // Change this to the appropriate topic
+
+    // Beacon positions (x, y)
+    const beaconPositions = {
+        "1783": {x: 100, y: 100},
+        "1782": {x: 300, y: 100},
+        "1781": {x: 100, y: 300},
+        "1784": {x: 300, y: 300}
+    };
+
+    // Function to create beacons and tag
+    function createNodes() {
+        const container = document.getElementById('container');
+        const tag = document.createElement('div');
+        tag.id = 'tag';
+        container.appendChild(tag);
+
+        Object.keys(beaconPositions).forEach(key => {
+            const beacon = document.createElement('div');
+            beacon.className = 'beacon';
+            beacon.style.left = beaconPositions[key].x + 'px';
+            beacon.style.top = beaconPositions[key].y + 'px';
+            container.appendChild(beacon);
+        });
+    }
+
+    // Initialize MQTT client
+    const client = new Paho.MQTT.Client(brokerUrl, clientId);
+
+    // Set callback handlers
+    client.onConnectionLost = onConnectionLost;
+    client.onMessageArrived = onMessageArrived;
+
+    // Connect the client
+    client.connect({
+        onSuccess: onConnect,
+        userName: 'ESP32UWB', // Add username
+        password: 'Alphaticesp32uwb' // Add password
+    });
+
+    // Called when the client connects
+    function onConnect() {
+        console.log('Connected to MQTT broker');
+        // Subscribe to MQTT topic
+        client.subscribe(topic);
+    }
+
+    // Called when the client loses its connection
+    function onConnectionLost(responseObject) {
+        if (responseObject.errorCode !== 0) {
+            console.log('Connection lost:', responseObject.errorMessage);
+        }
+    }
+
+    // Called when a message arrives
+    function onMessageArrived(message) {
+        const data = JSON.parse(message.payloadString);
+        console.log('Received message:', data);
+        // Update visualization based on incoming data
+        updateTagPosition(data);
+    }
+
+    // Function to update tag position based on distances using trilateration
+    function updateTagPosition(data) {
+        const tag = document.getElementById('tag');
+        const positions = Object.keys(data.links).map(key => beaconPositions[data.links[key].A]);
+        const distances = Object.keys(data.links).map(key => data.links[key].R);
+        
+        // Trilateration algorithm (assuming 2D space)
+        const sumWeights = distances.reduce((acc, val) => acc + (1 / val), 0);
+        let x = 0, y = 0;
+        for (let i = 0; i < positions.length; i++) {
+            const weight = (1 / distances[i]) / sumWeights;
+            x += positions[i].x * weight;
+            y += positions[i].y * weight;
+        }
+        
+        // Update tag position
+        tag.style.left = x + 'px';
+        tag.style.top = y + 'px';
+    }
+
+    // Call the function to create nodes
+    createNodes();
+</script>
+</body>
+</html>

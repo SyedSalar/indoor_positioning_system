@@ -17,15 +17,23 @@ class _SideMenuState extends State<SideMenu> {
         backgroundColor: primaryColor,
         child: ListView(
           children: [
-            DrawerHeader(
-              child: Image.asset("assets/logo.png"),
-            ),
+            // DrawerHeader(
+            //   // child: Image.asset("assets/logo.png"),
+            // ),
             DrawerListTile(
               title: "Room1",
               svgSrc: "assets/roomB.png",
               press: () {
                 setActiveRoute('/');
                 mainNavigatorKey.currentState!.pushNamed('/');
+              },
+            ),
+            DrawerListTile(
+              title: "Map",
+              svgSrc: "assets/roomB.png",
+              press: () {
+                setActiveRoute('/map');
+                mainNavigatorKey.currentState!.pushNamed('/map');
               },
             ),
           ],
